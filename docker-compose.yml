@@ -1,0 +1,26 @@
+services:
+  trace_api:
+    build:
+      context: .
+      dockerfile: infra/docker/trace_api.Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      TRACE_DB_PATH: /data/trace.db
+      REDACT_TEXT: "false"
+    volumes:
+      - trace_db:/data
+
+  studio_ui:
+    build:
+      context: .
+      dockerfile: infra/docker/studio_ui.Dockerfile
+    ports:
+      - "8501:8501"
+    environment:
+      TRACE_API_URL: http://trace_api:8000
+    depends_on:
+      - trace_api
+
+volumes:
+  trace_db:
