@@ -89,7 +89,9 @@ def create_app() -> FastAPI:
             filters["session_id"] = session_id
 
         items, total = list_llm_calls(filters=filters, limit=limit, offset=offset)
-        return {"total": total, "items": items}
+        # Avoid returning a `spans: null` field for list endpoints — exclude None fields
+        items_serialized = [item.model_dump(exclude_none=True) for item in items]
+        return {"total": total, "items": items_serialized}
 
     @app.get("/calls/{id}", response_model=LLMCallStored)
     def get_call(id: str) -> LLMCallStored:
@@ -98,7 +100,8 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=404, detail="call not found")
 
         call, spans = result
-        return call.model_copy(update={"spans": spans})
+        # `get_llm_call` already populates `spans` when requested; return the stored model directly
+        return call
 
     return app
 
