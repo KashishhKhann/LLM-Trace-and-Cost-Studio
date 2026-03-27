@@ -26,9 +26,13 @@ def _db_path() -> str:
 
 
 def create_app() -> FastAPI:
+    # Read environment-derived configuration once at startup (env vars don't change at runtime)
+    redact_text_at_startup = _env_bool("REDACT_TEXT", default=False)
+    db_path_at_startup = _db_path()
+
     @asynccontextmanager
     async def lifespan(_: FastAPI):
-        init_db(_db_path())
+        init_db(db_path_at_startup)
         yield
 
     app = FastAPI(title="LLM Trace API", lifespan=lifespan)
@@ -39,7 +43,7 @@ def create_app() -> FastAPI:
 
     @app.post("/ingest/llm_call", response_model=LLMCallIngestResponse)
     def ingest_llm_call(payload: LLMCallIngest) -> LLMCallIngestResponse:
-        redacted_payload = redact_llm_call_payload(payload, _env_bool("REDACT_TEXT", default=False))
+        redacted_payload = redact_llm_call_payload(payload, redact_text_at_startup)
         cost_usd = estimate_cost_usd(
             provider=redacted_payload.provider,
             model=redacted_payload.model,
@@ -73,7 +77,7 @@ def create_app() -> FastAPI:
         session_id: str | None = Query(default=None),
         limit: int = Query(default=100, ge=1, le=200),
         offset: int = Query(default=0, ge=0),
-    ) -> dict[str, Any]:
+    ) -> LLMCallListResponse:
         filters: dict[str, Any] = {}
         if from_ts is not None:
             filters["ts_server_from"] = from_ts
@@ -91,11 +95,12 @@ def create_app() -> FastAPI:
         items, total = list_llm_calls(filters=filters, limit=limit, offset=offset)
         # Avoid returning a `spans: null` field for list endpoints — exclude None fields
         items_serialized = [item.model_dump(exclude_none=True) for item in items]
-        return {"total": total, "items": items_serialized}
+        return LLMCallListResponse(total=total, items=[LLMCallStored.model_validate(item) if not isinstance(item, LLMCallStored) else item for item in items])
 
-    @app.get("/calls/{id}", response_model=LLMCallStored)
-    def get_call(id: str) -> LLMCallStored:
-        result = get_llm_call(id)
+    # Use `call_id` to avoid shadowing built-in `id` and match other codepaths' naming
+    @app.get("/calls/{call_id}", response_model=LLMCallStored)
+    def get_call(call_id: str) -> LLMCallStored:
+        result = get_llm_call(call_id)
         if result is None:
             raise HTTPException(status_code=404, detail="call not found")
 

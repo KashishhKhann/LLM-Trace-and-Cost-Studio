@@ -43,3 +43,8 @@ class LLMCallIngestResponse(BaseModel):
     ts_server: datetime
     cost_usd: float = Field(ge=0.0)
     stored: LLMCallStored
+
+
+class LLMCallListResponse(BaseModel):
+    total: int
+    items: list[LLMCallStored]

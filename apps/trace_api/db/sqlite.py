@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -10,14 +11,19 @@ from typing import Any
 from shared.schemas import LLMCallIngestSpan, LLMCallStored
 
 _DB_PATH: str | None = None
+_INIT_LOCK = threading.Lock()
 
 
 def init_db(db_path: str) -> None:
+    # Guard init to avoid race condition if called concurrently
     global _DB_PATH
-    _DB_PATH = db_path
-    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    with _INIT_LOCK:
+        if _DB_PATH == db_path:
+            return
+        _DB_PATH = db_path
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
 
-    with _connect() as conn:
+        with _connect() as conn:
         conn.executescript(
             """
             PRAGMA foreign_keys = ON;

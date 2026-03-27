@@ -20,7 +20,14 @@ def estimate_cost_usd(provider: str, model: str, tokens_in: int, tokens_out: int
     provider_key = provider.lower()
     model_key = model.lower()
     provider_pricing = PRICING.get(provider_key, {})
+    # Try exact match first, then fallback to prefix matching to handle model variants
     model_pricing = provider_pricing.get(model_key)
+    if model_pricing is None:
+        # attempt prefix match (e.g., real model ids with date suffixes)
+        for known_model_key, pricing in provider_pricing.items():
+            if model_key.startswith(known_model_key):
+                model_pricing = pricing
+                break
 
     if model_pricing is None:
         logger.warning("Missing pricing for provider=%s model=%s", provider, model)
