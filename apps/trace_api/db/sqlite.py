@@ -24,11 +24,11 @@ def init_db(db_path: str) -> None:
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
 
         with _connect() as conn:
-        conn.executescript(
-            """
-            PRAGMA foreign_keys = ON;
+            conn.executescript(
+                """
+                PRAGMA foreign_keys = ON;
 
-            CREATE TABLE IF NOT EXISTS llm_calls (
+                CREATE TABLE IF NOT EXISTS llm_calls (
                 id TEXT PRIMARY KEY,
                 ts_server TEXT NOT NULL,
                 ts_client TEXT,
