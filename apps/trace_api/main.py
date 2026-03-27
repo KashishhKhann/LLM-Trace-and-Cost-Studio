@@ -11,7 +11,12 @@ from fastapi import FastAPI, HTTPException, Query
 from apps.trace_api.db.sqlite import get_llm_call, init_db, insert_llm_call, list_llm_calls
 from shared.cost import estimate_cost_usd
 from shared.redaction import redact_llm_call_payload
-from shared.schemas import LLMCallIngest, LLMCallIngestResponse, LLMCallStored
+from shared.schemas import (
+    LLMCallIngest,
+    LLMCallIngestResponse,
+    LLMCallStored,
+    LLMCallListResponse,
+)
 
 
 def _env_bool(name: str, default: bool = False) -> bool:
