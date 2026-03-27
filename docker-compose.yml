@@ -10,6 +10,12 @@ services:
       REDACT_TEXT: "false"
     volumes:
       - trace_db:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   studio_ui:
     build:
@@ -20,7 +26,8 @@ services:
     environment:
       TRACE_API_URL: http://trace_api:8000
     depends_on:
-      - trace_api
+      trace_api:
+        condition: service_healthy
 
 volumes:
   trace_db:
